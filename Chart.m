@@ -63,7 +63,7 @@ classdef Chart
 
         % Check content
         if ~isfile(path)
-            error("Chart:Chart","Invalid file !!")
+            error("Chart:InvalidCSV","Invalid file !!")
         end
         
         obj.data = readtable(path);
@@ -92,10 +92,10 @@ classdef Chart
         if isempty(options.from)
             var_from = self.col_names(1);
         elseif numel(options.from) > 1
-            error("Chart:interpolate", ...
+            error("Chart:TooManyVariables", ...
                 "Too many variable from interpolate from !")
         elseif ~ismember(options.from,self.col_names)
-            error("Chart:interpolate", ...
+            error("Chart:UnrecognizedVariable", ...
                 "Unrecognized variable %s to interpolate from !", ...
                 options.from)
         else
@@ -123,7 +123,7 @@ classdef Chart
             for ii = 1:1:numel(options.variables)
                 var_name = options.variables(ii);
                 if ~ismember(var_name,self.col_names)
-                    error("Chart:interpolate", ...
+                    error("Chart:UnrecognizedVariable", ...
                         "Unrecognized variable name %s at position %d", ...
                         var_name,ii)
                 end
