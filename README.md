@@ -40,6 +40,8 @@ import Chart.*
 chart = Chart('path_to_file.csv');
 ```
 
+This function use the function `readtable` for reading the csv file, and have a `varargin` argument, so you can pass all the possible argument that you want to the `readtable` function.
+
 ### Accessing Column Names
 
 You can retrieve the column names from the table using the col_names property:

@@ -18,37 +18,73 @@ classdef Chart
     end
 
     methods (Access=private)
-        function [idx1,idx2] = get_surroudingLines(self,col,value)
-            % Si une méthode d'extrapolation nécessite d'avoir plusieurs
-            % valeurs inférieures ou supérieures, il faudrait ajouter un
-            % argument pour savoir le nombre de valeurs (inférieures ou
-            % supérieures) nécessaire, et utiliser 
-            %   any(value < self.data.(col)(n)
-            % Et changer les indices de début et de fin de la boucle for
-            
-            % Check range:
-            % ------------
-            if value < self.data.(col)(1)
-                error("Chart:ElementNotInChart", ...
-                    "Value %d is lower than the first element of variable %s (%d)", ...
-                    value,col,self.data.(col)(1))
-            elseif value > self.data.(col)(end)
-                error("Chart:ElementNotInChart", ...
-                    "Value %d is greater than the last element of variable %s (%d)", ...
-                    value,col,self.data.(col)(end))
-            end
+        function [idx1,idx2] = get_surroudingLines(self,col,value,n)
+            % NOTE: the last argument is there if a interpolation method
+            % require more then 2 values (1 greater and one lower) to
+            % interpolate a value.
 
-            % Iterate through the data:
-            % -------------------------
-            for ii = 1:1:numel(self.data.(col))-1
-                if value > self.data.(col)(ii) && value < self.data.(col)(ii+1)
-                    idx1 = ii;
-                    idx2 = ii+1;
-                    break
+            % Get slope:
+            % ----------
+            isAscending = self.data.(col)(1) < self.data.(col)(2);
+
+            % Ascending case:
+            % ---------------
+            if isAscending
+                if value < self.data.(col)(n)
+                     error("Chart:ElementNotInChart", ...
+                        "Value %d is lower than the first %d element of variable %s (%d)", ...
+                        value,n,col,self.data.(col)(n))
+                elseif value > self.data.(col)(end-(n-1))
+                    error("Chart:ElementNotInChart", ...
+                        "Value %d is greater than the last %d element of variable %s (%d)", ...
+                        value,n,col,self.data.(col)(end))
+                else
+                    idx1 = find(self.data.(col) < value, 1, 'last');
+                    idx2 = find(self.data.(col) > value, 1, 'first');
+                end
+
+            % Descending case:
+            % ----------------
+            else
+                if value > self.data.(col)(n)
+                     error("Chart:ElementNotInChart", ...
+                        "Value %d is greater than the first %d element of variable %s (%d)", ...
+                        value,n,col,self.data.(col)(n))
+                elseif value < self.data.(col)(end-(n-1))
+                    error("Chart:ElementNotInChart", ...
+                        "Value %d is lower than the last %d element of variable %s (%d)", ...
+                        value,n,col,self.data.(col)(end))
+                else
+                    idx1 = find(self.data.(col) > value, 1, 'last');
+                    idx2 = find(self.data.(col) < value, 1, 'first');
                 end
             end
+
+            
+            % % % % % Check range:
+            % % % % % ------------
+            % % % % if value < self.data.(col)(1)
+            % % % %     error("Chart:ElementNotInChart", ...
+            % % % %         "Value %d is lower than the first element of variable %s (%d)", ...
+            % % % %         value,col,self.data.(col)(1))
+            % % % % elseif value > self.data.(col)(end)
+            % % % %     error("Chart:ElementNotInChart", ...
+            % % % %         "Value %d is greater than the last element of variable %s (%d)", ...
+            % % % %         value,col,self.data.(col)(end))
+            % % % % end
+            % % % % 
+            % % % % % Iterate through the data:
+            % % % % % -------------------------
+            % % % % for ii = 1:1:numel(self.data.(col))-1
+            % % % %     if value > self.data.(col)(ii) && value < self.data.(col)(ii+1)
+            % % % %         idx1 = ii;
+            % % % %         idx2 = ii+1;
+            % % % %         break
+            % % % %     end
+            % % % % end
         end
-        function result = interpolate_linear(self,x,from,idx1,idx2)
+        function result = interpolate_linear(self,x,from)
+            [idx1,idx2] = self.get_surroudingLines(from,x,1);
             result = self.data(idx1,:) + ...
                 (self.data{idx2,:}-self.data{idx1,:}) / ...
                 (self.data{idx2,from}-self.data{idx1,from}) * ...
@@ -57,7 +93,7 @@ classdef Chart
     end
 
     methods (Access=public)
-        function obj = Chart(path)
+        function obj = Chart(path,varargin)
         %ABAQUES Construct an instance of an abaque
         %   Read the CSV file at 'path' and loads it's content as a table
 
@@ -66,7 +102,7 @@ classdef Chart
             error("Chart:InvalidCSV","Invalid file !!")
         end
         
-        obj.data = readtable(path);
+        obj.data = readtable(path,varargin{:,:});
         end
 
         function result = interpolate(self,x,options)
@@ -107,10 +143,9 @@ classdef Chart
         if any(self.data.(var_from)==x)
             result_row = self.data(self.data.(var_from)==x,:);
         else
-            [idx1,idx2] = self.get_surroudingLines(var_from,x);
             switch options.method
                 case "linear"
-                    result_row = self.interpolate_linear(x,var_from,idx1,idx2);
+                    result_row = self.interpolate_linear(x,var_from);
             end
         end
 
